@@ -2,8 +2,7 @@ package config
 
 import (
 	"log"
-	// "os" was removed because it is not used
-
+	// "os"  <-- DELETE THIS LINE
 	"github.com/spf13/viper"
 )
 
@@ -21,13 +20,11 @@ func LoadConfig() (Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
 
-	// Default values for local development
 	viper.SetDefault("DB_HOST", "db")
 	viper.SetDefault("DB_PORT", "5432")
 	viper.SetDefault("HOSPITAL_A_API_URL", "https://hospital-a.api.co.th")
 	viper.SetDefault("JWT_SECRET", "change_this_secret_in_prod")
 
-	// If running in Docker, these env vars will overwrite defaults
 	if err := viper.ReadInConfig(); err != nil {
 		log.Println("Config file not found, using environment variables")
 	}
