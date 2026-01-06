@@ -2,7 +2,7 @@ package config
 
 import (
 	"log"
-	"os"
+	// "os" was removed because it is not used
 
 	"github.com/spf13/viper"
 )

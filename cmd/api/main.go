@@ -1,5 +1,3 @@
-// App entry point
-
 package main
 
 import (
@@ -12,6 +10,7 @@ import (
 	"agnos-gin/internal/service"
 	"fmt"
 	"log"
+	"time" // ERROR FIX: This import is required for time.Sleep
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
@@ -28,13 +27,31 @@ func main() {
 	// 2. Connect DB
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+
+	var db *gorm.DB
+
+	// Retry connection logic
+	// CRITICAL FIX: We use '=' here, NOT ':=', to update the outer 'db' variable.
+	for i := 0; i < 10; i++ {
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
+			log.Println("Database connected successfully.")
+			break
+		}
+		log.Printf("Waiting for database... (%d/10) Error: %v\n", i+1, err)
+		time.Sleep(2 * time.Second)
+	}
+
+	// If db is still nil or err exists after retries, we must stop.
 	if err != nil {
-		log.Fatal("Cannot connect to DB:", err)
+		log.Fatal("Cannot connect to DB after retries:", err)
 	}
 
 	// 3. Migrate
-	db.AutoMigrate(&domain.Staff{}, &domain.Patient{})
+	// If the app crashed at line 37 before, it was likely here because 'db' was nil.
+	if err := db.AutoMigrate(&domain.Staff{}, &domain.Patient{}); err != nil {
+		log.Fatal("Migration failed:", err)
+	}
 
 	// 4. Init Layers
 	// Repos
@@ -66,5 +83,6 @@ func main() {
 	}
 
 	// Run
+	log.Println("Server starting on :8080")
 	r.Run(":8080")
 }
